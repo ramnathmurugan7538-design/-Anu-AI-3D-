@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ta"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#130b2a"><title>Anu AI – Colour 3D PLY Preview</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#10091f;color:#fff;font:15px system-ui,'Noto Sans Tamil',sans-serif}header{text-align:center;padding:14px 10px 8px}h1{font-size:20px;margin:0 0 4px}p{color:#d8c9ef;font-size:13px;margin:0}main{max-width:760px;margin:auto;padding:10px}.stage{height:68vh;min-height:390px;position:relative;border:1px solid #68489a;border-radius:15px;overflow:hidden;background:radial-gradient(ellipse at center,#72519b,#211638 65%,#10091f)}#viewer{position:absolute;inset:0}.bar{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}button,.pick{background:#6840a5;color:white;border:1px solid #a98ad1;border-radius:10px;padding:11px 13px;font-weight:650;font-size:14px}.pick input{display:none}.status{background:#211638;border:1px solid #68489a;border-radius:10px;padding:10px;color:#eadfff;font-size:13px;line-height:1.5;margin-top:10px}.hint{font-size:12px;color:#cbbde4;line-height:1.6;margin:10px 2px}.tag{position:absolute;top:9px;left:9px;background:#160d29dd;border:1px solid #ffffff55;border-radius:30px;padding:6px 10px;font-size:11px;z-index:4;pointer-events:none}button:disabled{opacity:.45}
+</style></head><body><header><h1>💜 Anu AI – Colour 3D Model Preview</h1><p>PLY Gaussian Splat Viewer · Android Chrome</p></header><main><div class="stage"><div id="viewer"></div><span class="tag">3D MODEL · Drag to rotate · Pinch to zoom</span></div><div class="bar"><label class="pick">📂 PLY கோப்பைத் தேர்வு செய்<input id="file" type="file" accept=".ply,application/octet-stream"></label><button id="reset">↺ Reset View</button><button id="full">⛶ Full Screen</button></div><div class="status" id="status">Anu 3D மாடல் தானாக ஏற்றப்படும். சில நொடிகள் காத்திருக்கவும்.</div><div class="status" id="localWarning" style="display:none;border-color:#d99b45;color:#ffe2b3">⚠️ இந்த HTML-ஐ Android-ல் Download / file:// வழியாக நேரடியாகத் திறந்தால் Chrome 3D library-ஐத் தடுக்கலாம். இந்த Preview-ஐ HTTPS இணைய முகவரியில் திறக்க வேண்டும். இது கோப்பின் பிழை அல்ல.</div><p class="hint">மூன்று PLY கோப்புகளும் Gaussian Splat 3D format-ல் உள்ளன. இந்த preview அவற்றின் உண்மையான நிறமுள்ள 3D காட்சியைச் சோதிக்கும். இந்த PLY format-ஐ நேரடியாக GLB skeletal character ஆக மாற்ற முடியாது; Eye/Head/Mouth animation-க்கு தனியாக rigged mesh தேவைப்படும்.</p></main>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "@mkkellogg/gaussian-splats-3d": "https://cdn.jsdelivr.net/npm/@mkkellogg/gaussian-splats-3d@0.4.7/build/gaussian-splats-3d.module.js"
+  }
+}
+</script>
+<script type="module">
+let GaussianSplats3D;
+try {
+  GaussianSplats3D = await import('@mkkellogg/gaussian-splats-3d');
+} catch (importError) {
+  document.getElementById('status').textContent = '❌ 3D Library ஏற்றப்படவில்லை: ' + (importError?.message || importError) + '. இணைய இணைப்பைச் சரிபார்க்கவும்.';
+  throw importError;
+}
+const host=document.getElementById('viewer'),status=document.getElementById('status'),fileInput=document.getElementById('file');
+window.addEventListener('error', e => { status.textContent = '❌ Viewer பிழை: ' + (e.message || 'JavaScript error'); });
+window.addEventListener('unhandledrejection', e => { status.textContent = '❌ Viewer பிழை: ' + (e.reason?.message || e.reason || 'Load failed'); });
+if(location.protocol==='file:'){document.getElementById('localWarning').style.display='block';status.textContent='இந்தக் கோப்பு local file ஆகத் திறக்கப்பட்டுள்ளது. Android Chrome-ல் ES module பாதுகாப்பு காரணமாக 3D viewer தொடங்காமல் இருக்கலாம். HTTPS-ல் திறந்த பிறகு PLY-ஐத் தேர்வு செய்யவும்.';}
+let viewer=null,currentUrl=null,loading=false;
+async function loadFile(file){if(!file||loading)return;loading=true;status.textContent='⏳ '+file.name+' ஏற்றப்படுகிறது… 3D rendering தொடங்குகிறது. திரையை மூட வேண்டாம்.';try{if(viewer){viewer.dispose();viewer=null}if(currentUrl)URL.revokeObjectURL(currentUrl);host.innerHTML='';currentUrl=URL.createObjectURL(file);viewer=new GaussianSplats3D.Viewer({rootElement:host, selfDrivenMode:true, useBuiltInControls:true, cameraUp:[0,1,0], initialCameraPosition:[0,0,1.55], initialCameraLookAt:[0,0,0], sharedMemoryForWorkers:false, gpuAcceleratedSort:false, ignoreDevicePixelRatio:true, sphericalHarmonicsDegree:0, halfPrecisionCovariancesOnGPU:true, logLevel:GaussianSplats3D.LogLevel.Error});await viewer.addSplatScene(currentUrl,{format:GaussianSplats3D.SceneFormat.Ply,showLoadingUI:true,splatAlphaRemovalThreshold:5,progressiveLoad:true,scale:[1,1,1],halfPrecisionCovariancesOnGPU:true});viewer.start();status.textContent='✅ '+file.name+' ஏற்றப்பட்டது. விரலால் இழுத்து சுழற்றவும்; இரண்டு விரலால் zoom செய்யவும்.';}catch(e){console.error(e);status.textContent='❌ ஏற்ற முடியவில்லை: '+(e?.message||e)+'. முதலில் இந்தப் பக்கத்தை HTTPS இணைய முகவரியில் திறக்கவும்; பின்னர் Chrome-ல் WebGL / இணைய இணைப்பைச் சரிபார்க்கவும்.';}finally{loading=false}}
+fileInput.addEventListener('change',e=>loadFile(e.target.files?.[0]));
+(async()=>{try{status.textContent='⏳ Anu 3D மாடல் தானாக ஏற்றப்படுகிறது…';const r=await fetch('./ok%203d%20col%20anu.ply');if(!r.ok)throw new Error('PLY file HTTP '+r.status);const b=await r.blob();await loadFile(new File([b],'ok 3d col anu.ply',{type:'application/octet-stream'}));}catch(e){status.textContent='❌ தானாக ஏற்ற முடியவில்லை: '+(e?.message||e)+'. கீழே உள்ள PLY தேர்வு பட்டனைப் பயன்படுத்தலாம்.';}})();
+document.getElementById('reset').onclick=()=>{if(viewer){viewer.stop();viewer.start();status.textContent='View refresh செய்யப்பட்டது.'}};document.getElementById('full').onclick=()=>{const el=document.querySelector('.stage');if(!document.fullscreenElement)el.requestFullscreen?.();else document.exitFullscreen?.()};
+</script></body></html>
